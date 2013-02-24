@@ -1,21 +1,22 @@
 <?xml version="1.0"?>
 <extension key="net.utement.civipaymentext.paymill" type="module">
   <file>paymill</file>
-  <name>FIXME</name>
-  <description>FIXME</description>
-  <license>FIXME</license>
+  <name>Paymill_Payment_Processor</name>
+  <description>Paymill Payment Processor</description>
+  <license>BSD</license>
   <maintainer>
-    <author>FIXME</author>
-    <email>FIXME@example.com</email>
+    <author>Uroš Tement</author>
+    <email>utement@gmail.com</email>
   </maintainer>
   <releaseDate>2013-02-24</releaseDate>
-  <version>1.0</version>
-  <develStage>alpha</develStage>
+  <version>0.1</version>
+  <develStage>early development</develStage>
   <compatibility>
     <ver>4.2</ver>
   </compatibility>
-  <comments>This is a new, undeveloped module</comments>
+  <comments>For Zavod Iskreni.net</comments>
   <civix>
     <namespace>CRM/Paymill</namespace>
   </civix>
 </extension>
+
