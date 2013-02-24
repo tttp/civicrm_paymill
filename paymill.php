@@ -68,3 +68,4 @@ function paymill_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
 function paymill_civicrm_managed(&$entities) {
   return _paymill_civix_civicrm_managed($entities);
 }
+
