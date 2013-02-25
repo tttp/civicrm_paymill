@@ -59,6 +59,7 @@ function paymill_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
   return _paymill_civix_civicrm_upgrade($op, $queue);
 }
 
+
 /**
  * Implementation of hook_civicrm_managed
  *
@@ -66,6 +67,26 @@ function paymill_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * is installed, disabled, uninstalled.
  */
 function paymill_civicrm_managed(&$entities) {
+  $entities[] = array(
+  	'module' => 'net.utement.civipaymentext.stripe',
+  	'name' => 'Paymill',
+  	'entity' => 'PaymentProcessorType',
+  	'params' => array(
+  	  'version' => 1,
+      'name' => 'Paymill',
+      'title' => 'Paymill',
+      'description' => 'Paymill Payment Processor',
+      'class_name' => 'Payment_Paymill',
+      'billing_mode' => 'form',
+      'user_name_label' => 'Secret Key',
+      'password_label' => 'Publishable Key',
+  	  'url_site_default'=> 'https://api.stripe.com/v1',
+      'url_recur_default' => 'https://api.stripe.com/v1',
+      'url_site_test_default' => 'https://api.stripe.com/v1',
+      'url_recur_test_default' => 'https://api.stripe.com/v1',
+      'is_recur' => 1,
+      'payment_type' => 1
+    ),
+  );
   return _paymill_civix_civicrm_managed($entities);
 }
-

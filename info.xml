@@ -1,5 +1,4 @@
-<?xml version="1.0"?>
-<extension key="net.utement.civipaymentext.paymill" type="module">
+ion key="net.utement.civipaymentext.paymill" type="module">
   <file>paymill</file>
   <name>Paymill_Payment_Processor</name>
   <description>Paymill Payment Processor</description>
@@ -10,13 +9,13 @@
   </maintainer>
   <releaseDate>2013-02-24</releaseDate>
   <version>0.1</version>
-  <develStage>early development</develStage>
+  <develStage>alpha</develStage>
   <compatibility>
     <ver>4.2</ver>
+    <ver>4.3</ver>
   </compatibility>
   <comments>For Zavod Iskreni.net</comments>
   <civix>
     <namespace>CRM/Paymill</namespace>
   </civix>
 </extension>
-
