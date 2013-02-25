@@ -1,4 +1,6 @@
-ion key="net.utement.civipaymentext.paymill" type="module">
+<?xml version="1.0"?>
+<extension key="net.utement.civipaymentext.paymill" type="module">
+  <downloadUrl>http://localhost/~utement/update/net.utement.civipaymentext.paymill.zip</downloadUrl>
   <file>paymill</file>
   <name>Paymill_Payment_Processor</name>
   <description>Paymill Payment Processor</description>

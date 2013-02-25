@@ -68,7 +68,7 @@ function paymill_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  */
 function paymill_civicrm_managed(&$entities) {
   $entities[] = array(
-  	'module' => 'net.utement.civipaymentext.stripe',
+  	'module' => 'net.utement.civipaymentext.paymill',
   	'name' => 'Paymill',
   	'entity' => 'PaymentProcessorType',
   	'params' => array(
