@@ -92,29 +92,102 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
 
         // Include Paymill library & Set API credentials.
         require_once("Paymill-PHP/lib/Services/Paymill/Transactions.php");
+        require_once("Paymill-PHP/lib/Services/Paymill/Clients.php");
+        require_once("Paymill-PHP/lib/Services/Paymill/Payments.php");
+        require_once("CRM/Core/Error.php");
 
 
         $transactionsObject = new Services_Paymill_Transactions($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
+
+        $clientsObject = new Services_Paymill_Clients($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
 
 
         echo "<br><br>";
 
 
-     
-        
+
         if (isset($params['paymill_token'])) {
             $card_details = $params['paymill_token'];
             if ($params['paymill_token'] == null) {
                 CRM_Core_Error::fatal(ts('Paymill token is NULL!'));
             }
         } else {
-            CRM_Core_Error::fatal(ts('Stripe.js token was not passed!'));
+            CRM_Core_Error::fatal(ts('Paymill.js token was not passed!'));
         }
-        
-        
-        
-        
-        
+
+        // Preverim če klient po emailu obstaja
+        // Check for existing customer, create new otherwise.
+        if (isset($params['email'])) {
+            $email = $params['email'];
+        } elseif (isset($params['email-5'])) {
+            $email = $params['email-5'];
+        } elseif (isset($params['email-Primary'])) {
+            $email = $params['email-Primary'];
+        }
+
+
+        // Preverim če klient že obstaja
+        $clients = $clientsObject->get(array('email' => $email));
+
+        if (isset($clients[0]['id'])) {
+            $params['client_id'] = $clients[0]['id'];
+        } else {
+            // Kreiram klienta
+            $client = $clientsObject->create(array(
+                'email' => $email,
+                'description' => 'Civi Paymill Testni'
+            ));
+
+            $params['client_id'] = $client['id'];
+        }
+
+
+        // Payment
+
+        $payment_params = array(
+            'client' => $params['client_id'],
+            'token' => $params['paymill_token']
+        );
+
+        $paymentsObject = new Services_Paymill_Payments($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
+        $creditcard = $paymentsObject->create($payment_params);
+        $params['creditcard_id'] = $creditcard['id'];
+
+        if (isset($creditcard['id'])) {
+            //CRM_Core_Error::fatal(ts('Uspel payment! ' . CRM_Core_Error::debug_var('payment', $creditcard)));
+        } else {
+            CRM_Core_Error::fatal(ts('Napaka payment! ' . CRM_Core_Error::debug_var('payment', $creditcard) . CRM_Core_Error::debug_var('params', $params)));
+        }
+
+
+        // Transakcija ..
+
+        $transaction_params = array(
+            'amount' => $params['amount'], // e.g. "4200" for 42.00 EUR
+            'currency' => 'EUR', // ISO 4217
+            'client' => $params['client_id'],
+            'payment' => $params['creditcard_id'],
+            'description' => 'Test Transaction'
+        );
+        $transaction = $transactionsObject->create($transaction_params);
+
+
+        if (isset($transaction['response_code'])) {
+            if ($transaction['response_code'] == 20000) {
+                } else {
+                CRM_Core_Error::fatal(ts('Napaka transakcije! ' . CRM_Core_Error::debug_var('transaction', $transaction) . CRM_Core_Error::debug_var('params', $params)));
+            }
+        } else {
+            CRM_Core_Error::fatal(ts('Transakcija ni uspela'));
+        }
+
+        // Success!  Return some values for CiviCRM.
+        $params['trxn_id'] = $transaction['id'];
+        // Return fees & net amount for Civi reporting.  Thanks Kevin!
+        $params['fee_amount'] = 24;
+        $params['net_amount'] = 23;
+
+        return $params;
     }
 
     /**
@@ -149,7 +222,7 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
                     break;
 
                 case 'charge':
-                    $return = Stripe_Charge::create($params);
+                    $return = Paymill_Charge::create($params);
                     break;
 
                 case 'save':
