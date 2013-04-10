@@ -86,6 +86,7 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
 
         // Paymill amount required in cents.
         $amount = $params['amount'] * 100;
+
         // It would require 3 digits after the decimal for one to make it this far.
         // CiviCRM prevents this, but let's be redundant.
         $amount = number_format($amount, 0, '', '');
@@ -96,14 +97,7 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
         require_once("Paymill-PHP/lib/Services/Paymill/Payments.php");
         require_once("CRM/Core/Error.php");
 
-
-        $transactionsObject = new Services_Paymill_Transactions($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
-
-        $clientsObject = new Services_Paymill_Clients($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
-
-
         echo "<br><br>";
-
 
 
         if (isset($params['paymill_token'])) {
@@ -127,6 +121,8 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
 
 
         // Preverim če klient že obstaja
+        $clientsObject = new Services_Paymill_Clients($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
+
         $clients = $clientsObject->get(array('email' => $email));
 
         if (isset($clients[0]['id'])) {
@@ -135,7 +131,7 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
             // Kreiram klienta
             $client = $clientsObject->create(array(
                 'email' => $email,
-                'description' => 'Civi Paymill Testni'
+                'description' => $params['first_name'] . ' ' . $params['last_name']
             ));
 
             $params['client_id'] = $client['id'];
@@ -143,7 +139,6 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
 
 
         // Payment
-
         $payment_params = array(
             'client' => $params['client_id'],
             'token' => $params['paymill_token']
@@ -161,31 +156,34 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
 
 
         // Transakcija ..
+        $transactionsObject = new Services_Paymill_Transactions($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
+
 
         $transaction_params = array(
-            'amount' => $params['amount'], // e.g. "4200" for 42.00 EUR
-            'currency' => 'EUR', // ISO 4217
+            'amount' => $params['amount'] * 100, // e.g. "4200" for 42.00 EUR
+            'currency' => $params['currencyID'], // ISO 4217
             'client' => $params['client_id'],
             'payment' => $params['creditcard_id'],
-            'description' => 'Test Transaction'
+            'description' => $params['description']
         );
         $transaction = $transactionsObject->create($transaction_params);
 
 
         if (isset($transaction['response_code'])) {
             if ($transaction['response_code'] == 20000) {
-                } else {
-                CRM_Core_Error::fatal(ts('Napaka transakcije! ' . CRM_Core_Error::debug_var('transaction', $transaction) . CRM_Core_Error::debug_var('params', $params)));
+                // transakcija ok    
+            } else {
+                CRM_Core_Error::fatal(ts('Napaka transakcije! ' . $transaction['response_code']));
             }
         } else {
-            CRM_Core_Error::fatal(ts('Transakcija ni uspela'));
+            CRM_Core_Error::fatal(ts('Transakcija ni uspela' . $transaction['response_code']));
         }
 
         // Success!  Return some values for CiviCRM.
         $params['trxn_id'] = $transaction['id'];
         // Return fees & net amount for Civi reporting.  Thanks Kevin!
-        $params['fee_amount'] = 24;
-        $params['net_amount'] = 23;
+        //$params['fee_amount'] = 24;
+        //$params['net_amount'] = 23;
 
         return $params;
     }
