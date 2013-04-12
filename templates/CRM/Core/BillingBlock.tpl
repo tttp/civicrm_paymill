@@ -23,11 +23,9 @@
  | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
  +--------------------------------------------------------------------+
 *}
-{crmRegion name="billing-block"}
 {if $form.credit_card_number or $form.bank_account_number}
     
     <!--- Start Paymill --->
-    
       {if $paymentProcessor.payment_processor_type == 'Paymill'}
           <script type="text/javascript" src="https://bridge.paymill.com/"></script>
     <script type="text/javascript">
@@ -44,7 +42,7 @@
              * Don't reference by form#id since it changes between payment pages
              * (Contribution / Event / etc).
              */
-            cj("#Main").addClass('paymill-payment-form');
+            cj("#crm-container>form").addClass('paymill-payment-form');
             cj("form.paymill-payment-form").unbind('submit');
             cj("form.paymill-payment-form").submit(function(event) {
             
@@ -52,22 +50,26 @@
                 if(cj(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
                 return true;
             }
+               // Handle multiple payment options and Stripe not being chosen.
+                if(cj(this).find(".crm-section.payment_processor-section").length > 0) {
+                  if(!cj(this).find("input#paymill-token").length > 0) {
+                    return true;
+                  }
+                }
             
-            //window.alert("Delam token");
-            //window.alert(cj('#data-amount').val());
                              
-            if (!paymill.validateCardNumber(cj('#credit_card_number').val())) {
-                  window.alert("Napačna št kartice");
-                  return false;
-             }
+          //  if (!paymill.validateCardNumber(cj('#credit_card_number').val())) {
+          //        window.alert("Napačna št kartice");
+          //        return false;
+          //   }
        
-        if (!paymill.validateExpiry(
-          cj('#credit_card_exp_date\\[M\\]').val(), 
-          cj('#credit_card_exp_date\\[Y\\]').val()
-      )) {
-          window.alert("Napačen datum");
-                  return false;    
-      }
+        //if (!paymill.validateExpiry(
+        //  cj('#credit_card_exp_date\\[M\\]').val(), 
+         // cj('#credit_card_exp_date\\[Y\\]').val()
+      //)) {
+       //   window.alert("Napačen datum");
+       //           return false;    
+      //}
       
                 
             paymill.createToken({
@@ -310,4 +312,3 @@ function sameAddress( setValue ) {
 </script>
 {/if}
 {/if}
-{/crmRegion}
