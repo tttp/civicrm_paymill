@@ -42,7 +42,7 @@
              * Don't reference by form#id since it changes between payment pages
              * (Contribution / Event / etc).
              */
-            cj("#crm-container>form").addClass('paymill-payment-form');
+            cj("#Main").addClass('paymill-payment-form');
             cj("form.paymill-payment-form").unbind('submit');
             cj("form.paymill-payment-form").submit(function(event) {
             
