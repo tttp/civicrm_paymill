@@ -124,9 +124,26 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
         $clientsObject = new Services_Paymill_Clients($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
 
         $clients = $clientsObject->get(array('email' => $email));
+        $params['clients'] = $clients;
 
         if (isset($clients[0]['id'])) {
             $params['client_id'] = $clients[0]['id'];
+
+            // set existing credit card details
+            $lastPaymentCount = end(array_keys($clients[0]['payment']));
+            $params['lastPaymentCount'] = $lastPaymentCount; // todo DELETE
+
+            $tmpClient = $clients[0];
+
+            $params['payment_last4'] = $tmpClient['payment'][$lastPaymentCount]['last4'];
+            $params['payment_expire_month'] = $tmpClient['payment'][$lastPaymentCount]['expire_month'];
+            $params['payment_expire_year'] = $tmpClient['payment'][$lastPaymentCount]['expire_year'];
+
+            if ($params['payment_last4'] == $params['cvv2'] && $params['payment_expire_month'] == $params['credit_card_exp_date']['M'] && $params['payment_expire_year'] == $params['credit_card_exp_date']['Y']) {
+                $params['payment_id'] = $tmpClient['payment'][$lastPaymentCount]['id'];
+            } else {
+                $params['payment_id'] = "";
+            }
         } else {
             // Kreiram klienta
             $client = $clientsObject->create(array(
@@ -135,25 +152,35 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
             ));
 
             $params['client_id'] = $client['id'];
+            $params['payment_id'] = "";
         }
 
+        // If client doesnt have payment
+        if (!isset($params['payment_id']) || $params['payment_id'] == "") {
 
-        // Payment
-        $payment_params = array(
-            'client' => $params['client_id'],
-            'token' => $params['paymill_token']
-        );
+            // Payment
+            $payment_params = array(
+                'client' => $params['client_id'],
+                'token' => $params['paymill_token']
+            );
 
-        $paymentsObject = new Services_Paymill_Payments($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
-        $creditcard = $paymentsObject->create($payment_params);
-        $params['creditcard_id'] = $creditcard['id'];
+            $paymentsObject = new Services_Paymill_Payments($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
+            $payment = $paymentsObject->create($payment_params);
+            $params['paymentObject'] = $payment;
+            $params['payment_id'] = $payment['id'];
 
-        if (isset($creditcard['id'])) {
-            //CRM_Core_Error::fatal(ts('Uspel payment! ' . CRM_Core_Error::debug_var('payment', $creditcard)));
-        } else {
-            CRM_Core_Error::fatal(ts('Napaka payment! ' . CRM_Core_Error::debug_var('payment', $creditcard) . CRM_Core_Error::debug_var('params', $params)));
+
+            if (isset($payment['id'])) {
+                //CRM_Core_Error::fatal(ts('Uspel payment! ' . CRM_Core_Error::debug_var('payment', $creditcard)));
+            } else {
+                CRM_Core_Error::fatal(ts('Napaka payment! ' . CRM_Core_Error::debug_var('payment', $creditcard) . CRM_Core_Error::debug_var('params', $params)));
+            }
         }
 
+        // Handle recurring payments in doRecurPayment().
+        if (CRM_Utils_Array::value('is_recur', $params) && $params['contributionRecurID']) {
+            $result = $this->doRecurPayment($params, $amount, $stripe_customer);
+        }
 
         // Transakcija ..
         $transactionsObject = new Services_Paymill_Transactions($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
@@ -179,6 +206,9 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
             CRM_Core_Error::fatal(ts('Transakcija ni uspela' . $transaction['response_code']));
         }
 
+
+
+
         // Success!  Return some values for CiviCRM.
         $params['trxn_id'] = $transaction['id'];
         // Return fees & net amount for Civi reporting.  Thanks Kevin!
@@ -186,6 +216,85 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
         //$params['net_amount'] = 23;
 
         return $params;
+    }
+
+    function doRecurPayment(&$params) {
+
+        require_once("Paymill-PHP/lib/Services/Paymill/Offers.php");
+        require_once("Paymill-PHP/lib/Services/Paymill/Subscriptions.php");
+
+        switch ($this->_mode) {
+            case 'test':
+                $transaction_mode = 0;
+                break;
+            case 'live':
+                $transaction_mode = 1;
+        }
+
+        $interval = $params['frequency_interval'];
+        $frequency = $params['frequency_unit'];
+        $installments = $params['installments'];
+        $amount = $params['amount'] * 100;
+
+        $offer_name = $interval . " " . strtoupper($frequency) . " " . $params['amount'] . $params['currencyID'];
+
+        // Check if Offer existst
+        $offersObject = new Services_Paymill_Offers($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
+        $offer = $offersObject->get(array('offset' => $interval, 'interval' => $frequency, 'amount' => $amount));
+
+        $tmp = CRM_Core_Error::debug('$offer' . $offer);
+
+        if (!isset($offer[0]['id'])) {
+
+            $offerParams = array(
+                'amount' => $amount, // E.g. "4200" for 42.00 EUR
+                'currency' => $params['currencyID'], // ISO 4217
+                'interval' => $interval . " " . strtoupper($frequency),
+                'name' => $offer_name
+            );
+            $offer = $offersObject->create($offerParams);
+            $tmp = CRM_Core_Error::debug('$offer' . $offer);
+            $params['offer_id'] = $offer['id'];
+        } else {
+            $params['offer_id'] = $offer[0]['id'];
+        }
+
+
+        // Create subscription
+        $subscriptionParams = array(
+            'client' => $params['client_id'],
+            'offer' => $params['offer_id'],
+            'payment' => $params['payment_id']
+        );
+
+        // Check if Offer existst
+        $subscriptionsObject = new Services_Paymill_Offers($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
+        $subscription = $subscriptionsObject->create($subscriptionParams);
+
+
+
+
+
+        if (!isset($subscription['id'])) {
+
+            $tmp .= CRM_Core_Error::debug('$offer' . $offer);
+
+            $tmp .= CRM_Core_Error::debug('$subscriptionParams', $subscriptionParams);
+
+            $tmp .= CRM_Core_Error::debug('$subscriptionsObject', $subscriptionsObject);
+            $tmp .= CRM_Core_Error::debug('$subscription', $subscription);
+            $tmp .= CRM_Core_Error::debug('$subscription', $subscription[0]);
+            $tmp .= CRM_Core_Error::debug('$subscription', $subscription['response_code']);
+
+            $tmp .= CRM_Core_Error::debug('$params', $params);
+
+            CRM_Core_Error::fatal(ts('Subscription failed' . $tmp));
+
+            return $params;
+        } else {
+            $params['subscription_id'] = $subscription[0]['id'];
+            return $params;
+        }
     }
 
     /**
