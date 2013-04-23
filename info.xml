@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <extension key="net.utement.civi.payment.paymill" type="module">
-  <downloadUrl>http://localhost/~utement/update/net.utement.civi.payment.paymill.zip</downloadUrl>
+  <downloadUrl>http://localhost/~utement/download/paymill/net.utement.civi.payment.paymill.zip</downloadUrl>
   <file>paymill</file>
   <name>Paymill_Payment_Processor</name>
   <description>Paymill Payment Processor</description>
@@ -9,14 +9,14 @@
     <author>Uroš Tement</author>
     <email>utement@gmail.com</email>
   </maintainer>
-  <releaseDate>2013-04-10</releaseDate>
-  <version>0.2.0</version>
-  <develStage>alpha</develStage>
+  <releaseDate>2013-04-23</releaseDate>
+  <version>0.3.0</version>
+  <develStage>beta</develStage>
   <compatibility>
     <ver>4.2</ver>
     <ver>4.3</ver>
   </compatibility>
-  <comments>For Zavod Iskreni.net</comments>
+  <comments>Unstable. Created for Zavod Iskreni.net</comments>
   <civix>
     <namespace>CRM/Paymill</namespace>
   </civix>
