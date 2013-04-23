@@ -190,7 +190,7 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
             'amount' => $params['amount'] * 100, // e.g. "4200" for 42.00 EUR
             'currency' => $params['currencyID'], // ISO 4217
             'client' => $params['client_id'],
-            'payment' => $params['creditcard_id'],
+            'payment' => $params['payment_id'],
             'description' => $params['description']
         );
         $transaction = $transactionsObject->create($transaction_params);
@@ -200,7 +200,11 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
             if ($transaction['response_code'] == 20000) {
                 // transakcija ok    
             } else {
-                CRM_Core_Error::fatal(ts('Napaka transakcije! ' . $transaction['response_code']));
+                $tmp = CRM_Core_Error::debug('$params', $params);
+                $tmp .= CRM_Core_Error::debug('$transaction', $transaction);
+
+            
+                CRM_Core_Error::fatal(ts('Napaka transakcije! ' . $tmp));
             }
         } else {
             CRM_Core_Error::fatal(ts('Transakcija ni uspela' . $transaction['response_code']));
@@ -268,7 +272,7 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
         );
 
         // Check if Offer existst
-        $subscriptionsObject = new Services_Paymill_Offers($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
+        $subscriptionsObject = new Services_Paymill_Subscriptions($this->_paymentProcessor['user_name'], $this->_paymentProcessor['url_site']);
         $subscription = $subscriptionsObject->create($subscriptionParams);
 
 
@@ -292,7 +296,7 @@ class CRM_Core_Payment_Paymill extends CRM_Core_Payment {
 
             return $params;
         } else {
-            $params['subscription_id'] = $subscription[0]['id'];
+            $params['subscription_id'] = $subscription['id'];
             return $params;
         }
     }
